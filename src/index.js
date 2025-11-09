@@ -1,4 +1,6 @@
 import express from 'express';
+import 'dotenv/config';
+import cors from 'cors';
 import rolRoutes from './routes/rol.routes.js';
 import userRoutes from './routes/user.routes.js';
 import personRoutes from './routes/person.routes.js'
