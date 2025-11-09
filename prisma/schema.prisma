@@ -5,11 +5,335 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
+
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+
 }
+
+/*Listado de enums*/
+enum EstadoSolicitud {
+  ENVIADA
+  REVISADA
+  APROBADA
+  RECHAZADA
+}
+
+enum TipoArchivo {
+  RUC
+  Carta_autorizacion
+  Correo_corporativo
+  otro
+}
+
+enum EstadoCarrito {
+  Activo
+  Guardado
+  Convertido
+}
+
+enum EstadoPedido {
+  pendiente
+  entregado
+  cancelado
+}
+
+enum EstadoTicket {
+  pendiente
+  entregado
+  cancelado
+}
+
+enum EstadoResena {
+  pendiente
+  aprobado
+  rechazado
+}
+
+/*Modelos*/
+model Rol {
+  id           String       @id @default(uuid())
+  nombre       String       @unique
+  estado       Boolean      @default(true)
+  usuariosRol  UsuarioRol[]
+}
+
+model Certificacion {
+  id              String                   @id @default(uuid())
+  nombre          String                   @unique
+  descripcion     String?
+  fechaCreacion   DateTime                 @default(now())
+  productos       ProductoCertificacion[]
+}
+
+model Prueba {
+  id             String               @id @default(uuid())
+  nombre         String               @unique
+  activa         Boolean              @default(true)
+  realizadoHace  DateTime?            @db.Date
+  productos      ProductoPrueba[]
+}
+
+model CategoriaProducto {
+  id             String      @id @default(uuid())
+  nombre         String      @unique
+  activa         Boolean     @default(true)
+  fechaRegistro  DateTime    @default(now())
+  productos      Producto[]
+}
+
+model Persona {
+  id              String     @id @default(uuid())
+  nombreCompleto  String
+  telefono        Int?
+  fechaNacimiento DateTime?  @db.Date
+  usuarios        Usuario[]
+}
+
+model Usuario {
+  id             String     @id @default(uuid())
+  nombreUsuario  String
+  email          String     @unique
+  passHash       String
+  estadoSesion   Boolean    @default(false)
+  fechaRegistro  DateTime   @default(now())
+  ultimaSesion   DateTime?
+
+  personaId String
+  persona   Persona   @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  solicitudes  SolicitudRepresentante[]
+  roles        UsuarioRol[]
+  productos    Producto[]          @relation("PublicadosPor")
+  carritos     Carrito[]
+  pedidos      Pedido[]
+  tickets      TicketRetiro[]
+  resenas      Resena[]
+
+  @@index([personaId])
+}
+
+model SolicitudRepresentante {
+  id            String           @id @default(uuid())
+  enviadoPor    String
+  estado        EstadoSolicitud  @default(ENVIADA)
+  motivo        String?
+  fechaCreacion DateTime         @default(now())
+  fechaRevisado DateTime?
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  documentos DocumentoSoporte[]
+
+  @@index([usuarioId])
+}
+
+model DocumentoSoporte {
+  id          String       @id @default(uuid())
+  tipo        TipoArchivo  @default(otro)
+  ruta        String
+  fechaSubida DateTime     @default(now())
+
+  solicitudId String
+  solicitud   SolicitudRepresentante @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+
+  @@index([solicitudId])
+}
+
+model UsuarioRol {
+  id        String  @id @default(uuid())
+  activo    Boolean @default(false)
+
+  usuarioId String
+  rolId     String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol     Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, rolId])
+  @@index([usuarioId])
+  @@index([rolId])
+}
+
+model Producto {
+  id            String      @id @default(uuid())
+  titulo        String      @unique
+  stock         Int?
+  precio        Decimal?    @db.Decimal(12, 2)
+  descripcion   String?
+  activo        Boolean?
+
+  publicadoPorId String
+  categoriaId    String
+
+  publicadoPor Usuario           @relation("PublicadosPor", fields: [publicadoPorId], references: [id], onDelete: Cascade)
+  categoria    CategoriaProducto @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  imagenes         ImagenProducto[]
+  certificaciones  ProductoCertificacion[]
+  pruebas          ProductoPrueba[]
+  carritoItems     CarritoProducto[]
+  pedidoItems      PedidoProducto[]
+  resenas          Resena[]
+
+  @@index([publicadoPorId])
+  @@index([categoriaId])
+}
+
+model ImagenProducto {
+  id               String    @id @default(uuid())
+  url              String
+  esPrincipal      Boolean   @default(false)
+  fechaSubida      DateTime  @default(now())
+
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@index([productoId])
+}
+
+model ProductoCertificacion {
+  id               String @id @default(uuid())
+  fechaAsignacion  DateTime @default(now())
+
+  productoId      String
+  certificacionId String
+
+  producto      Producto      @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  certificacion Certificacion @relation(fields: [certificacionId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, certificacionId])
+  @@index([productoId])
+  @@index([certificacionId])
+}
+
+model ProductoPrueba {
+  id               String    @id @default(uuid())
+  fechaRealizacion DateTime? @db.Date
+  resultado        String?
+
+  productoId String
+  pruebaId   String
+
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  prueba   Prueba   @relation(fields: [pruebaId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, pruebaId])
+  @@index([productoId])
+  @@index([pruebaId])
+}
+
+model Carrito {
+  id                String        @id @default(uuid())
+  estado            EstadoCarrito @default(Activo)
+  totalProductos    Int           @default(0)
+  subtotal          Decimal       @default(0) @db.Decimal(12, 2)
+  descuento         Decimal       @default(0) @db.Decimal(12, 2)
+  total             Decimal       @default(0) @db.Decimal(12, 2)
+  fechaCreacion     DateTime      @default(now())
+  fechaModificacion DateTime      @default(now())
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  items    CarritoProducto[]
+  pedidos  Pedido[]
+
+  @@index([usuarioId])
+}
+
+model CarritoProducto {
+  id             String   @id @default(uuid())
+  cantidad       Int      @default(1)
+  precioUnitario Decimal  @db.Decimal(12, 2)
+  totalProducto  Decimal  @db.Decimal(12, 2)
+  fechaAgregado  DateTime @default(now())
+
+  carritoId  String
+  productoId String
+
+  carrito  Carrito  @relation(fields: [carritoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@unique([carritoId, productoId])
+  @@index([carritoId])
+  @@index([productoId])
+}
+
+model Pedido {
+  id          String       @id @default(uuid())
+  estado      EstadoPedido @default(pendiente)
+  fechaPedido DateTime     @default(now())
+  total       Decimal      @db.Decimal(12, 2)
+
+  usuarioId String
+  carritoId String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  carrito Carrito @relation(fields: [carritoId], references: [id], onDelete: Cascade)
+
+  items   PedidoProducto[]
+  tickets TicketRetiro[]
+
+  @@index([usuarioId])
+  @@index([carritoId])
+}
+
+model PedidoProducto {
+  id             String   @id @default(uuid())
+  cantidad       Int
+  precioUnitario Decimal  @db.Decimal(12, 2)
+  totalProducto  Decimal  @db.Decimal(12, 2)
+  fechaAgregado  DateTime @default(now())
+
+  pedidoId   String
+  productoId String
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@unique([pedidoId, productoId])
+  @@index([pedidoId])
+  @@index([productoId])
+}
+
+model TicketRetiro {
+  id           String       @id @default(uuid())
+  fechaEmision DateTime     @default(now())
+  puntoRetiro  String?
+  codigoRetiro String?
+  estado       EstadoTicket @default(pendiente)
+
+  pedidoId  String
+  usuarioId String
+
+  pedido  Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([pedidoId])
+  @@index([usuarioId])
+}
+
+model Resena {
+  id          String       @id @default(uuid())
+  calificacion Int
+  comentario   String?
+  fechaResena  DateTime    @default(now())
+  estado       EstadoResena @default(pendiente)
+  moderado     Boolean     @default(false)
+
+  productoId String
+  usuarioId  String
+
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([productoId])
+  @@index([usuarioId])
+}
+
