@@ -5,7 +5,8 @@ import rolRoutes from './routes/rol.routes.js';
 import userRoutes from './routes/user.routes.js';
 import personRoutes from './routes/person.routes.js';
 import pruebaRoutes from './routes/prueba.routes.js';
-import categoriaProductosRoutes from './routes/categoriaProductos.route.js'
+import categoriaProductosRoutes from './routes/categoriaProductos.route.js';
+import certificacionRoutes from './routes/certificacion.routes.js'
 
 const app = express();
 
@@ -16,5 +17,6 @@ app.use('/api', userRoutes);
 app.use('/api', personRoutes);
 app.use ('/api',pruebaRoutes);
 app.use ('/api',categoriaProductosRoutes);
+app.use ('/api', certificacionRoutes);
 app.listen(3000);
 console.log('Server started on port', 3000);
