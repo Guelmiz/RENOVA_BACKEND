@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/index.js",
-      "prisma:generate": "prisma generate",
-  "postinstall": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -21,5 +21,13 @@
   "devDependencies": {
     "nodemon": "^3.1.10",
     "prisma": "^6.19.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Guelmiz/RENOVA_BACKEND.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Guelmiz/RENOVA_BACKEND/issues"
+  },
+  "homepage": "https://github.com/Guelmiz/RENOVA_BACKEND#readme"
 }
