@@ -101,7 +101,7 @@ model Usuario {
   passHash       String
   estadoSesion   Boolean    @default(false)
   fechaRegistro  DateTime   @default(now())
-  ultimaSesion   DateTime?
+  ultimaSesion   DateTime?  
 
   personaId String
   persona   Persona   @relation(fields: [personaId], references: [id], onDelete: Cascade)
