@@ -1,11 +1,10 @@
-// controllers/auth.controller.js
+
 import { prisma } from "../db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-/* ----------------------------- Utilidades fecha ---------------------------- */
+
 function fecha_fix(fecha) {
-  // Acepta "YYYY-MM-DD" y devuelve Date (UTC) o null
   if (!fecha) return null;
   const m = /^\d{4}-\d{2}-\d{2}$/.exec(fecha);
   if (!m) return null;
@@ -14,7 +13,6 @@ function fecha_fix(fecha) {
 }
 
 function dateOnlyString(fecha) {
-  // Recibe Date o string parseable. Devuelve "YYYY-MM-DD" o null
   if (!fecha) return null;
   try {
     return new Date(fecha).toISOString().split("T")[0];
@@ -23,7 +21,7 @@ function dateOnlyString(fecha) {
   }
 }
 
-/* --------------------------------- Bcrypt --------------------------------- */
+
 async function hashPassword(password) {
   return bcrypt.hash(password, 10);
 }
@@ -31,13 +29,13 @@ async function verifyPassword(plain, hash) {
   return bcrypt.compare(plain, hash);
 }
 
-/* --------------------------------- Prisma --------------------------------- */
+
 async function findUserByEmail(email) {
   return prisma.usuario.findUnique({
     where: { email },
     include: {
       persona: true,
-      roles: { include: { rol: true } }, // usuarioRol -> rol
+      roles: { include: { rol: true } }, 
     },
   });
 }
@@ -50,14 +48,14 @@ export async function findUserByID(id) {
         persona: true,
         roles: { include: { rol: true } },
       },
-    }); // si no existe, devuelve null
+    }); 
   } catch (error) {
     console.error("❌ Error en findUserByID:", error);
     throw error;
   }
 }
 
-/* ----------------------------- DTO de respuesta ---------------------------- */
+
 function buildUserDTO(user) {
   return {
     id: user.id,
@@ -78,7 +76,6 @@ function buildUserDTO(user) {
   };
 }
 
-/* ------------------------------- Middleware JWT ---------------------------- */
 export function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || "";
@@ -94,7 +91,7 @@ export function requireAuth(req, res, next) {
   }
 }
 
-/* --------------------------------- Endpoints -------------------------------- */
+
 export const registerUser = async (req, res) => {
   try {
     const {
@@ -141,8 +138,6 @@ export const registerUser = async (req, res) => {
           personaId: persona.id,
         },
       });
-
-      // Asegura que el rol exista
       const rol = await tx.rol.upsert({
         where: { nombre: rolNombre },
         update: {},
