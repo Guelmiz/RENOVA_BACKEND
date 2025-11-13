@@ -87,7 +87,6 @@ export const createProducto = async (req, res) => {
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
-        // violación de unique (por ejemplo, titulo único)
         return bad(res, "Ya existe un producto con ese título");
       }
     }
@@ -96,11 +95,7 @@ export const createProducto = async (req, res) => {
   }
 };
 
-/* ===========================================================
-   LIST: GET /api/productos
-   Query: q?, categoria?(nombre), publisher?(nombreUsuario), activo?, page?, pageSize?, orderBy?
-   orderBy: "titulo:asc|desc", "precio:asc|desc", "stock:asc|desc"
-   =========================================================== */
+
 export const listProductos = async (req, res) => {
   try {
     const {
@@ -117,7 +112,6 @@ export const listProductos = async (req, res) => {
     const pageNum = Math.max(parseInt(page, 10) || 1, 1);
     const skip = (pageNum - 1) * take;
 
-    // Orden
     let order = { titulo: "asc" };
     if (orderBy) {
       const [field, dirRaw] = String(orderBy).split(":");
@@ -127,7 +121,7 @@ export const listProductos = async (req, res) => {
       }
     }
 
-    // Filtros dinámicos
+ 
     const where = {
       AND: [
         q
@@ -177,9 +171,7 @@ export const listProductos = async (req, res) => {
   }
 };
 
-/* ===========================================================
-   READ by ID: GET /api/productos/:id
-   =========================================================== */
+
 export const getProductoById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -204,10 +196,6 @@ export const getProductoById = async (req, res) => {
   }
 };
 
-/* ===========================================================
-   READ by titulo: GET /api/productos/by-titulo/:titulo
-   (útil para chequeo rápido por unique)
-   =========================================================== */
 export const getProductoByTitulo = async (req, res) => {
   try {
     const { titulo } = req.params;
@@ -227,12 +215,6 @@ export const getProductoByTitulo = async (req, res) => {
   }
 };
 
-/* ===========================================================
-   UPDATE: PUT /api/productos/:id
-   Body: campos básicos, nombreCategoria?, imagenes?[], reemplazarImagenes?(bool)
-   - Si envían nombreUsuario (opcional), se valida que coincida con req.user
-   - Cambiar publisher no se permite aquí por seguridad (opcional habilitar)
-   =========================================================== */
 export const updateProducto = async (req, res) => {
   try {
     const { id } = req.params;
@@ -243,9 +225,9 @@ export const updateProducto = async (req, res) => {
       descripcion,
       activo,
       nombreCategoria,
-      imagenes,            // opcional: [{url, esPrincipal}]
-      reemplazarImagenes,  // bool: si true, borra todas y crea nuevas
-      nombreUsuario,       // opcional: si llega, validar coherencia
+      imagenes,            
+      reemplazarImagenes,  
+      nombreUsuario,       
     } = req.body;
 
     const existing = await prisma.producto.findUnique({
