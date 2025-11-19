@@ -1,8 +1,8 @@
-
 import { prisma } from "../db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
+import path from "path"
+import cloudinary from "../config/cloudinary.js";
 
 function fecha_fix(fecha) {
   if (!fecha) return null;
@@ -73,6 +73,7 @@ function buildUserDTO(user) {
     fechaRegistro: user.fechaRegistro ?? null,
     ultimaSesion: user.ultimaSesion ?? null,
     estadoSesion: user.estadoSesion ?? false,
+    imagen: user.imagen ?? null
   };
 }
 
@@ -84,7 +85,7 @@ export function requireAuth(req, res, next) {
       return res.status(401).json({ message: "No autenticado" });
     }
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // { sub, roles, iat, exp }
+    req.user = payload; 
     return next();
   } catch {
     return res.status(401).json({ message: "Token inválido o expirado" });
@@ -102,6 +103,7 @@ export const registerUser = async (req, res) => {
       telefono,
       fechaNacimiento,
       rolNombre = "CLIENTE",
+      imagen
     } = req.body ?? {};
 
     if (!nombreUsuario || !email || !password || !nombreCompleto) {
@@ -136,6 +138,7 @@ export const registerUser = async (req, res) => {
           email,
           passHash,
           personaId: persona.id,
+          imagen: imagen ?? null,
         },
       });
       const rol = await tx.rol.upsert({
@@ -192,6 +195,7 @@ export const updateUser = async (req, res) => {
       nombreCompleto,
       telefono,
       fechaNacimiento,
+      imagen,
     } = req.body ?? {};
 
     const existente = await findUserByID(id);
@@ -205,11 +209,15 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    const usuarioData = {};
+   const usuarioData = {};
     if (nombreUsuario !== undefined) usuarioData.nombreUsuario = nombreUsuario;
     if (email !== undefined) usuarioData.email = email;
     if (password !== undefined && password !== "") {
       usuarioData.passHash = await hashPassword(password);
+    }
+    if (imagen !== undefined) {
+      
+      usuarioData.imagen = imagen || null; // <-- NUEVO
     }
 
     const personaData = {};
@@ -222,7 +230,7 @@ export const updateUser = async (req, res) => {
         ? fecha_fix(fechaNacimiento)
         : null;
     }
-
+    
     if (
       Object.keys(usuarioData).length === 0 &&
       Object.keys(personaData).length === 0
@@ -288,17 +296,21 @@ export const loginUser = async (req, res) => {
         .json({ message: "Email y password son obligatorios" });
     }
 
-    const user = await findUserByEmail(email); // << corregido
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.status(401).json({ message: "Credenciales inválidas" });
     }
 
-    const ok = await verifyPassword(password, user.passHash); // << comparar, no re-hashear
+    const ok = await verifyPassword(password, user.passHash);
     if (!ok) {
       return res.status(401).json({ message: "Credenciales inválidas" });
     }
 
-    const roles = (user.roles || []).map((r) => r.rol?.nombre);
+    // 🔹 Obtener roles como array de strings
+    const roles = (user.roles || [])
+      .map((r) => r.rol?.nombre)
+      .filter(Boolean);
+
     const token = jwt.sign(
       { sub: user.id, roles },
       process.env.JWT_SECRET,
@@ -310,7 +322,10 @@ export const loginUser = async (req, res) => {
       data: { estadoSesion: true, ultimaSesion: new Date() },
     });
 
-    return res.json({ token, user: buildUserDTO(user) });
+    const dto = buildUserDTO(user);
+    const dtoWithRoles = { ...dto, roles };
+
+    return res.json({ token, user: dtoWithRoles });
   } catch (err) {
     console.error("❌ Error en login:", err);
     return res.status(500).json({ message: "Error interno" });
@@ -319,16 +334,56 @@ export const loginUser = async (req, res) => {
 
 export const logoutUser = async (req, res) => {
   try {
-    const userId = req.user?.sub;
+    const userId = req.user?.id;
     if (userId) {
       await prisma.usuario.update({
         where: { id: userId },
-        data: { estadoSesion: false },
+        data: { estadoSesion: false, ultimaSesion: new Date() },
       });
     }
     return res.json({ ok: true });
   } catch (err) {
     console.error("❌ Error en logout:", err);
     return res.status(500).json({ message: "Error interno" });
+  }
+};
+
+export const uploadUserImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const usuario = await prisma.usuario.findUnique({ where: { id } });
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No se recibió ninguna imagen" });
+    }
+
+    
+    const b64 = Buffer.from(req.file.buffer).toString("base64");
+    const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+    // Subir a Cloudinary
+    const result = await cloudinary.uploader.upload(dataURI, {
+      folder: "usuarios",        // carpeta en tu Cloudinary
+      public_id: `user_${id}`,   // un id por usuario (se sobreescribe)
+      overwrite: true,
+    });
+
+    // Guardar la URL segura en la BD
+    const updated = await prisma.usuario.update({
+      where: { id },
+      data: { imagen: result.secure_url },
+    });
+
+    return res.json({
+      message: "Imagen actualizada",
+      imagen: updated.imagen,
+    });
+  } catch (error) {
+    console.error("❌ Error al subir imagen (Cloudinary):", error);
+    return res.status(500).json({ message: "Error al subir la imagen" });
   }
 };

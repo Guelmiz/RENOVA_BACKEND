@@ -102,7 +102,7 @@ model Usuario {
   estadoSesion   Boolean    @default(false)
   fechaRegistro  DateTime   @default(now())
   ultimaSesion   DateTime?  
-
+  imagen         String? 
   personaId String
   persona   Persona   @relation(fields: [personaId], references: [id], onDelete: Cascade)
 

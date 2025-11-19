@@ -12,12 +12,11 @@ export async function requireAuth(req, res, next) {
 
     if (!token) return bad(res, "Falta token de autorización (Bearer)");
 
-    
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
   
     const usuario = await prisma.usuario.findUnique({
-      where: { id: payload.userId },
+      where: { id: payload.sub },
       include: {
         roles: {
           where: { activo: true },
@@ -28,7 +27,6 @@ export async function requireAuth(req, res, next) {
 
     if (!usuario) return notFound(res, "Usuario no encontrado");
     if (!usuario.estadoSesion) return bad(res, "La sesión no está activa");
-
 
     req.user = {
       id: usuario.id,
