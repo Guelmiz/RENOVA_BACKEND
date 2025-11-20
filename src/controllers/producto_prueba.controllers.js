@@ -1,8 +1,5 @@
 import { prisma } from '../db.js';
 
-import { prisma } from '../db.js';
-
-// --- Funciones de Ayuda (Helpers) ---
 
 function convertirFecha(fecha) {
     if (!fecha) return null;
@@ -14,9 +11,7 @@ function formatearFecha(fecha) {
     return fecha ? fecha.toISOString().split('T')[0] : null;
 }
 
-// --- Controladores (CRUD) ---
 
-// 1. Obtener todas las relaciones Producto-Prueba
 export const getProductoPruebas = async (req, res) => {
     const productoPruebas = await prisma.productoPrueba.findMany({
         include: {
@@ -69,7 +64,7 @@ export const createProductoPrueba = async (req, res) => {
         newProductoPrueba.fechaRealizacion = formatearFecha(newProductoPrueba.fechaRealizacion);
         res.json(newProductoPrueba);
     } catch (error) {
-        // Manejo de error por si ya existe la combinación (por el @@unique)
+        
         if (error.code === 'P2002') {
             return res.status(400).json({ error: "Este producto ya tiene registrada esta prueba." });
         }
@@ -77,7 +72,7 @@ export const createProductoPrueba = async (req, res) => {
     }
 };
 
-// 4. Actualizar (Ej: Cambiar el resultado o la fecha)
+
 export const updateProductoPrueba = async (req, res) => {
     const { productoId, pruebaId, fechaRealizacion, resultado } = req.body;
 
@@ -86,8 +81,8 @@ export const updateProductoPrueba = async (req, res) => {
             id: req.params.id
         },
         data: {
-            productoId, // Opcional, usualmente no se cambia
-            pruebaId,   // Opcional, usualmente no se cambia
+            productoId, 
+            pruebaId,   
             resultado,
             fechaRealizacion: fechaRealizacion ? convertirFecha(fechaRealizacion) : null,
         },

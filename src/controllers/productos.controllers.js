@@ -29,24 +29,33 @@ export const createProducto = async (req, res) => {
       precio,
       descripcion,
       activo,
-      nombreCategoria,
+      categoriaId, 
       imagenes = [], 
       nombreUsuario,
+      pruebas = [],       
+      certificaciones = [] 
     } = req.body;
 
-    if (!titulo) return bad(res, "El título es requerido");
-    if (!nombreCategoria) return bad(res, "El nombre de la categoría es requerido");
 
+    if (!titulo) return bad(res, "El título es requerido");
+    if (!categoriaId) return bad(res, "La categoría es requerida");
+
+  
     if (nombreUsuario && req.user?.nombreUsuario &&
         nombreUsuario.toLowerCase() !== req.user.nombreUsuario.toLowerCase()) {
       return bad(res, "nombreUsuario no coincide con el usuario autenticado");
     }
-    const categoria = await findCategoriaByNombre(nombreCategoria);
+
+
+    const categoria = await prisma.categoriaProducto.findUnique({
+        where: { id: categoriaId }
+    });
+
     if (!categoria) return notFound(res, "Categoría no encontrada");
-    if (categoria.activa === false) return bad(res, "La categoría está inactiva");
 
   
     const nuevoProducto = await prisma.$transaction(async (tx) => {
+  
       const creado = await tx.producto.create({
         data: {
           titulo,
@@ -54,8 +63,8 @@ export const createProducto = async (req, res) => {
           stock: toIntOrNull(stock),
           precio: toDecimalOrNull(precio),
           activo: typeof activo === "boolean" ? activo : true,
-          publicadoPorId: req.user.id,     // <- siempre el del token
-          categoriaId: categoria.id,
+          publicadoPorId: req.user.id,
+          categoriaId: categoria.id, 
         },
       });
 
@@ -73,28 +82,47 @@ export const createProducto = async (req, res) => {
         }
       }
 
+      if (Array.isArray(pruebas) && pruebas.length > 0) {
+        const dataPruebas = pruebas.map((pruebaId) => ({
+          productoId: creado.id,
+          pruebaId: pruebaId,
+        }));
+        await tx.productoPrueba.createMany({ data: dataPruebas, skipDuplicates: true });
+      }
+
+
+      if (Array.isArray(certificaciones) && certificaciones.length > 0) {
+        const dataCerts = certificaciones.map((certId) => ({
+          productoId: creado.id,
+          certificacionId: certId,
+        }));
+        await tx.productoCertificacion.createMany({ data: dataCerts, skipDuplicates: true });
+      }
+
+   
       return tx.producto.findUnique({
         where: { id: creado.id },
         include: {
           categoria: { select: { id: true, nombre: true } },
           publicadoPor: { select: { id: true, nombreUsuario: true } },
           imagenes: true,
+          pruebas: { include: { prueba: true } },
+          certificaciones: { include: { certificacion: true } }
         },
       });
     });
 
     return created(res, nuevoProducto, "Producto creado exitosamente");
   } catch (err) {
+    console.error("Error createProducto:", err);
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         return bad(res, "Ya existe un producto con ese título");
       }
     }
-    console.error(err);
-    return bad(res, "Error al crear producto");
+    return bad(res, "Error al crear producto: " + err.message);
   }
 };
-
 
 export const listProductos = async (req, res) => {
   try {
@@ -241,7 +269,7 @@ export const updateProducto = async (req, res) => {
       return bad(res, "nombreUsuario no coincide con el usuario autenticado");
     }
 
-    // Resolver categoría si quieren cambiarla por nombre
+
     let categoriaId = existing.categoriaId;
     if (nombreCategoria) {
       const cat = await findCategoriaByNombre(nombreCategoria);
@@ -317,5 +345,28 @@ export const softDeleteProducto = async (req, res) => {
   }
 };
 
+export const deleteImagenProducto = async (req, res) => {
+  try {
+    const { id } = req.params;
 
+ 
+    const imagen = await prisma.imagenProducto.findUnique({
+      where: { id },
+    });
+
+    if (!imagen) return notFound(res, "La imagen no existe");
+
+  
+
+    
+    await prisma.imagenProducto.delete({
+      where: { id },
+    });
+
+    return ok(res, { id }, "Imagen eliminada correctamente");
+  } catch (error) {
+    console.error("Error eliminando imagen:", error);
+    return bad(res, "Error al eliminar la imagen");
+  }
+};
 
