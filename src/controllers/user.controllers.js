@@ -365,14 +365,14 @@ export const uploadUserImage = async (req, res) => {
     const b64 = Buffer.from(req.file.buffer).toString("base64");
     const dataURI = `data:${req.file.mimetype};base64,${b64}`;
 
-    // Subir a Cloudinary
+   
     const result = await cloudinary.uploader.upload(dataURI, {
-      folder: "usuarios",        // carpeta en tu Cloudinary
-      public_id: `user_${id}`,   // un id por usuario (se sobreescribe)
+      folder: "usuarios",        
+      public_id: `user_${id}`,   
       overwrite: true,
     });
 
-    // Guardar la URL segura en la BD
+  
     const updated = await prisma.usuario.update({
       where: { id },
       data: { imagen: result.secure_url },

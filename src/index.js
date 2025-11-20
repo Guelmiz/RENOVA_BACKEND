@@ -10,6 +10,7 @@ import categoriaProductosRoutes from './routes/categoriaProductos.route.js';
 import certificacionRoutes from './routes/certificacion.routes.js';
 import productoRoutes from './routes/productos.route.js';
 import resenasRoutes from './routes/resenas.route.js';
+import productoPruebaRoutes from './routes/prueba_producto.routes.js';
 const app = express();
 
 app.use(cors({
@@ -30,6 +31,7 @@ app.use('/api', categoriaProductosRoutes);
 app.use('/api', certificacionRoutes);
 app.use('/api', productoRoutes);
 app.use('/api', resenasRoutes);
+app.use('/api', productoPruebaRoutes);
 const PORT = process.env.PORT || 4000;
 console.log("PORT env:", process.env.PORT);   
 app.listen(PORT, () => {
