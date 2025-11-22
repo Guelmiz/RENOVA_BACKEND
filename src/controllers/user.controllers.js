@@ -217,7 +217,7 @@ export const updateUser = async (req, res) => {
     }
     if (imagen !== undefined) {
       
-      usuarioData.imagen = imagen || null; // <-- NUEVO
+      usuarioData.imagen = imagen || null; 
     }
 
     const personaData = {};

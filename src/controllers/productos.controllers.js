@@ -370,3 +370,204 @@ export const deleteImagenProducto = async (req, res) => {
   }
 };
 
+
+
+export const getMisProductos = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const productos = await prisma.producto.findMany({
+      where: {
+        publicadoPorId: userId,
+      },
+      include: {
+        categoria: {
+          select: { nombre: true },
+        },
+        imagenes: true,
+        _count: {
+          select: { 
+            pedidoItems: true 
+          } 
+        }
+      },
+      orderBy: {
+        id: 'desc'
+      }
+    });
+
+    return ok(res, productos);
+  } catch (err) {
+    console.error(err);
+    return bad(res, "Error al obtener tus productos");
+  }
+};
+
+
+export const getTalleresPublicos = async (req, res) => {
+  try {
+    
+    const talleres = await prisma.usuario.findMany({
+      where: {
+        roles: {
+          some: {
+            rol: { nombre: "Representante" }
+          }
+        },
+        productos: {
+          some: { activo: true }
+        }
+      },
+      select: {
+        id: true,
+        nombreUsuario: true,
+        fechaRegistro: true, 
+        imagen: true,
+        productos: {
+          where: { 
+            activo: true,
+            stock: { gt: 0 } 
+          },
+          take: 5,
+          orderBy: { id: 'desc' },
+          include: {
+            imagenes: true,
+            categoria: { select: { nombre: true } },
+            resenas: { select: { calificacion: true } }
+          }
+        }
+      }
+    });
+
+  
+    const resultado = talleres.map(taller => {
+      const yearRegistro = taller.fechaRegistro ? new Date(taller.fechaRegistro).getFullYear() : new Date().getFullYear();
+      const aniosCalculados = new Date().getFullYear() - yearRegistro;
+      
+  
+      let totalCalificacion = 0;
+      let totalResenas = 0;
+
+      const productosFormateados = taller.productos.map(prod => {
+        const sumaProd = prod.resenas.reduce((acc, r) => acc + r.calificacion, 0);
+        const ratingProd = prod.resenas.length > 0 ? sumaProd / prod.resenas.length : 0;
+        
+        if (prod.resenas.length > 0) {
+            totalCalificacion += sumaProd;
+            totalResenas += prod.resenas.length;
+        }
+
+        return {
+          id: prod.id,
+          nombre: prod.titulo,
+          precio: parseFloat(prod.precio),
+          categoria: prod.categoria?.nombre || "General",
+          imagen: prod.imagenes.find(img => img.esPrincipal)?.url || prod.imagenes[0]?.url || null,
+          rating: ratingProd || 5.0 
+        };
+      });
+
+      const ratingTaller = totalResenas > 0 ? (totalCalificacion / totalResenas).toFixed(1) : "5.0";
+
+      return {
+        tallerId: taller.id,
+        tallerNombre: taller.nombreUsuario, 
+        rating: parseFloat(ratingTaller),
+        anos: aniosCalculados, 
+        
+        imagenPerfil: taller.imagen,
+        productos: productosFormateados
+      };
+    });
+
+    return ok(res, resultado);
+
+  } catch (err) {
+    console.error(err);
+    return bad(res, "Error al obtener talleres");
+  }
+};
+
+
+export const getDetalleTaller = async (req, res) => {
+  try {
+    const { id } = req.params; 
+
+    const taller = await prisma.usuario.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nombreUsuario: true,
+        email: true, 
+        fechaRegistro: true,
+        imagen: true,
+        persona: {
+            select: {
+                nombreCompleto: true,
+                telefono: true
+            }
+        },
+        productos: {
+          where: { 
+            activo: true,
+            stock: { gt: 0 } 
+          },
+          orderBy: { id: 'desc' }, 
+          include: {
+            imagenes: true,
+            categoria: { select: { nombre: true } },
+            resenas: { select: { calificacion: true } }
+          }
+        }
+      }
+    });
+
+    if (!taller) return notFound(res, "Taller no encontrado");
+
+  
+    let totalCalificacion = 0;
+    let totalResenas = 0;
+
+    const productosFormateados = taller.productos.map(prod => {
+      const sumaProd = prod.resenas.reduce((acc, r) => acc + r.calificacion, 0);
+      const ratingProd = prod.resenas.length > 0 ? sumaProd / prod.resenas.length : 0;
+      
+      if (prod.resenas.length > 0) {
+          totalCalificacion += sumaProd;
+          totalResenas += prod.resenas.length;
+      }
+
+      return {
+        id: prod.id,
+        nombre: prod.titulo,
+        precio: parseFloat(prod.precio),
+        categoria: prod.categoria?.nombre || "General",
+        imagen: prod.imagenes.find(img => img.esPrincipal)?.url || prod.imagenes[0]?.url || null,
+        rating: ratingProd || 5.0,
+        stock: prod.stock
+      };
+    });
+
+    const ratingTaller = totalResenas > 0 ? (totalCalificacion / totalResenas).toFixed(1) : "5.0";
+    
+ 
+    const yearRegistro = taller.fechaRegistro ? new Date(taller.fechaRegistro).getFullYear() : new Date().getFullYear();
+    const anos = new Date().getFullYear() - yearRegistro;
+
+    const respuesta = {
+      id: taller.id,
+      nombre: taller.nombreUsuario, 
+      imagen: taller.imagen,
+      rating: parseFloat(ratingTaller),
+      anos: anos === 0 ? 1 : anos,
+      ubicacion: "Nicaragua",
+      productos: productosFormateados
+    };
+
+    return ok(res, respuesta);
+
+  } catch (err) {
+    console.error(err);
+    return bad(res, "Error al obtener detalle del taller");
+  }
+};
