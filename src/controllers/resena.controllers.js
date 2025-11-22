@@ -101,19 +101,30 @@ export const createResena = async (req, res) => {
   try {
     let {
       productoId,
-      usuarioId,
+      usuarioId, 
       productoTitulo,
       usuarioNombre,
       calificacion,
       comentario,
-      estado,     // opcional: por defecto 'pendiente'
-      moderado,   // opcional: por defecto false
+      estado,     
+      moderado,   
     } = req.body;
+
+    
+    if (!usuarioId && req.user?.id) {
+        usuarioId = req.user.id;
+    }
 
     const pid = await resolveProductoId({ productoId, productoTitulo });
     const uid = await resolveUsuarioId({ usuarioId, usuarioNombre });
 
-    // Validaciones mínimas (sin toInt/UUID manual)
+  
+    const existe = await prisma.resena.findFirst({
+        where: { productoId: pid, usuarioId: uid }
+    });
+    if (existe) return bad(res, "Ya has publicado una reseña para este producto.");
+
+
     const r = Number(calificacion);
     if (!Number.isInteger(r) || r < 1 || r > 5) return bad(res, 'calificacion debe ser entero de 1 a 5');
 
@@ -122,18 +133,22 @@ export const createResena = async (req, res) => {
       usuarioId: uid,
       calificacion: r,
       comentario: comentario ?? null,
+      estado: estado ?? "aprobado", 
+      moderado: moderado ?? true 
     };
-    if (estado !== undefined) data.estado = estado;
-    if (moderado !== undefined) data.moderado = Boolean(moderado);
 
-    const nueva = await prisma.resena.create({ data });
+    const nueva = await prisma.resena.create({ 
+        data,
+        include: { 
+            usuario: { select: { nombreUsuario: true, imagen: true } }
+        }
+    });
+    
     return created(res, nueva);
   } catch (err) {
     console.error(err);
-    if (err.message === 'PRODUCTO_NO_ENCONTRADO_TITULO') return bad(res, 'Producto no encontrado por título');
-    if (err.message === 'USUARIO_NO_ENCONTRADO_NOMBRE') return bad(res, 'Usuario no encontrado por nombreUsuario');
-    if (err.message === 'PRODUCTO_FALTANTE' || err.message === 'USUARIO_FALTANTE') return bad(res, 'Faltan identificadores de producto/usuario');
-    return bad(res, 'Error al crear reseña');
+    
+    return bad(res, 'Error al crear reseña: ' + err.message);
   }
 };
 

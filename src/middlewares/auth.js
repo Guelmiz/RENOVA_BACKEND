@@ -1,4 +1,4 @@
-// middlewares/auth.js
+
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 import { bad, notFound } from "../helpers/helpers.js";
