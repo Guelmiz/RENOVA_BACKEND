@@ -151,6 +151,7 @@ export const registerUser = async (req, res) => {
         data: {
           usuarioId: usuario.id,
           rolId: rol.id,
+          activo: true
         },
       });
 

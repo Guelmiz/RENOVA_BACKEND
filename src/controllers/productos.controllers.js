@@ -208,11 +208,24 @@ export const getProductoById = async (req, res) => {
       where: { id },
       include: {
         categoria: { select: { id: true, nombre: true} },
-        publicadoPor: { select: { id: true, nombreUsuario: true } },
+        publicadoPor: { select: { id: true, nombreUsuario: true, imagen: true } }, // Incluimos imagen del vendedor
         imagenes: true,
         certificaciones: { include: { certificacion: true } },
         pruebas: { include: { prueba: true } },
-        resenas: true,
+        
+       
+        resenas: { 
+            include: { 
+                usuario: { 
+                    select: { 
+                        nombreUsuario: true, 
+                        imagen: true 
+                    } 
+                } 
+            },
+            orderBy: { fechaResena: 'desc' }
+        },
+      
       },
     });
 

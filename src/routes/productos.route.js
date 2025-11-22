@@ -29,6 +29,7 @@ router.get("/productos/:id", getProductoById);
 
 router.post("/productos", requireAuth, requireRole("Representante"), createProducto);
 router.put("/productos/:id", requireAuth, requireRole("Representante"), updateProducto);
+
 router.patch("/productos/:id/desactivar", requireAuth, requireRole("Representante"), softDeleteProducto);
 router.delete("/productos/:id/imagen/:imagenId", requireRole("Representante"), deleteImagenProducto);
 
