@@ -584,3 +584,48 @@ export const getDetalleTaller = async (req, res) => {
     return bad(res, "Error al obtener detalle del taller");
   }
 };
+
+
+export const getTopProductos = async (req, res) => {
+  try {
+
+    const productos = await prisma.producto.findMany({
+      where: { 
+        activo: true, 
+        stock: { gt: 0 } 
+      },
+      include: {
+        imagenes: true,
+        resenas: { select: { calificacion: true } }
+      }
+    });
+
+    
+    const productosConRating = productos.map(p => {
+      const totalStars = p.resenas.reduce((acc, r) => acc + r.calificacion, 0);
+      const avg = p.resenas.length > 0 ? totalStars / p.resenas.length : 0;
+      
+      return {
+        ...p,
+        ratingPromedio: avg,
+        totalResenas: p.resenas.length
+      };
+    });
+
+    
+    productosConRating.sort((a, b) => {
+      if (b.ratingPromedio !== a.ratingPromedio) {
+        return b.ratingPromedio - a.ratingPromedio; 
+      }
+      return b.totalResenas - a.totalResenas; 
+    });
+
+   
+    const top4 = productosConRating.slice(0, 4);
+
+    return ok(res, top4);
+  } catch (err) {
+    console.error(err);
+    return bad(res, "Error obteniendo top productos");
+  }
+};

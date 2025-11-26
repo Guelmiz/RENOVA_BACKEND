@@ -9,7 +9,8 @@ import {
   deleteImagenProducto,
   getMisProductos,
   getTalleresPublicos,
-  getDetalleTaller
+  getDetalleTaller,
+  getTopProductos
 } from "../controllers/productos.controllers.js";
 
 import { requireAuth } from "../middlewares/auth.js"; 
@@ -19,6 +20,7 @@ const router = Router();
 
 
 router.get("/productos/mis-productos", requireAuth, requireRole("Representante"), getMisProductos);
+router.get("/productos/top", getTopProductos);
 router.get("/productos/by-titulo/:titulo", getProductoByTitulo);
 router.get("/talleres-publicos", getTalleresPublicos);
 router.get("/talleres/:id", getDetalleTaller);
