@@ -1,14 +1,14 @@
 import { prisma } from "../db.js";
 import { ok, bad, created } from "../helpers/helpers.js";
 
-// 1. CREAR SOLICITUD (Cliente)
+
 export const createSolicitud = async (req, res) => {
   try {
     const usuarioId = req.user.id;
     const { motivo, documentos } = req.body; 
-    // documentos espera ser un array: [{ tipo: "RUC", ruta: "https://..." }]
+    
 
-    // Verificar si ya tiene una solicitud pendiente
+  
     const pendiente = await prisma.solicitudRepresentante.findFirst({
         where: { usuarioId, estado: "ENVIADA" }
     });
@@ -23,7 +23,7 @@ export const createSolicitud = async (req, res) => {
             estado: "ENVIADA",
             documentos: {
                 create: documentos.map(doc => ({
-                    tipo: doc.tipo, // Enum: RUC, Carta_autorizacion, etc.
+                    tipo: doc.tipo, 
                     ruta: doc.ruta
                 }))
             }
@@ -37,18 +37,18 @@ export const createSolicitud = async (req, res) => {
   }
 };
 
-// 2. LISTAR SOLICITUDES (Admin)
+
 export const getAllSolicitudes = async (req, res) => {
     try {
         const solicitudes = await prisma.solicitudRepresentante.findMany({
-            where: { estado: "ENVIADA" }, // Solo las pendientes por defecto
+            where: { estado: "ENVIADA" }, 
             include: {
                 usuario: { 
                     include: { persona: true } 
                 },
                 documentos: true
             },
-            orderBy: { fechaCreacion: 'asc' } // Las más viejas primero
+            orderBy: { fechaCreacion: 'asc' } 
         });
         return ok(res, solicitudes);
     } catch (error) {
@@ -56,11 +56,11 @@ export const getAllSolicitudes = async (req, res) => {
     }
 };
 
-// 3. PROCESAR (APROBAR/RECHAZAR)
+
 export const procesarSolicitud = async (req, res) => {
     try {
-        const { id } = req.params; // ID de la solicitud
-        const { accion } = req.body; // "APROBADA" o "RECHAZADA"
+        const { id } = req.params;
+        const { accion } = req.body; 
 
         if (!['APROBADA', 'RECHAZADA'].includes(accion)) {
             return bad(res, "Acción inválida");
@@ -70,7 +70,7 @@ export const procesarSolicitud = async (req, res) => {
         if (!solicitud) return bad(res, "Solicitud no encontrada");
 
         await prisma.$transaction(async (tx) => {
-            // A. Actualizar estado de la solicitud
+          
             await tx.solicitudRepresentante.update({
                 where: { id },
                 data: { 
@@ -79,14 +79,12 @@ export const procesarSolicitud = async (req, res) => {
                 }
             });
 
-            // B. Si es APROBADA, dar rol de Representante
+            
             if (accion === 'APROBADA') {
-                // 1. Buscar el rol ID
+                
                 const rolRep = await tx.rol.findUnique({ where: { nombre: "Representante" } });
                 if (!rolRep) throw new Error("El rol 'Representante' no existe en la BD");
 
-                // 2. Asignar rol (Upsert para evitar error si ya lo tuviera desactivado)
-                // O simplemente create si estamos seguros. Usaremos create con validación.
                 const existeRelacion = await tx.usuarioRol.findUnique({
                     where: {
                         usuarioId_rolId: {

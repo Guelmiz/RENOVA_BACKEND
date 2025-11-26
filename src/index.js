@@ -14,7 +14,7 @@ import productoPruebaRoutes from './routes/prueba_producto.routes.js';
 import productoCertificacionRoutes from './routes/producto_certifacion.routes.js';
 import carritoRoutes from './routes/carrito.route.js';
 import pedidoRoutes from './routes/pedido.route.js';
-
+import solicitudRoutes from './routes/solicitudes.routes.js'
 
 const app = express();
 
@@ -40,7 +40,7 @@ app.use('/api', productoPruebaRoutes);
 app.use('/api', productoCertificacionRoutes);
 app.use('/api', carritoRoutes);
 app.use('/api', pedidoRoutes);
-
+app.use('/api', solicitudRoutes);
 const PORT = process.env.PORT || 4000;
 console.log("PORT env:", process.env.PORT);   
 app.listen(PORT, () => {
