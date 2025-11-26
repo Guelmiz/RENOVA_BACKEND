@@ -15,6 +15,7 @@ import productoCertificacionRoutes from './routes/producto_certifacion.routes.js
 import carritoRoutes from './routes/carrito.route.js';
 import pedidoRoutes from './routes/pedido.route.js';
 
+
 const app = express();
 
 app.use(cors({
@@ -39,6 +40,7 @@ app.use('/api', productoPruebaRoutes);
 app.use('/api', productoCertificacionRoutes);
 app.use('/api', carritoRoutes);
 app.use('/api', pedidoRoutes);
+
 const PORT = process.env.PORT || 4000;
 console.log("PORT env:", process.env.PORT);   
 app.listen(PORT, () => {
