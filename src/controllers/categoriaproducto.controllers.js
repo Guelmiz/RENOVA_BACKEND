@@ -44,8 +44,7 @@ export const createCategoria = async (req, res) => {
     const { nombre, fechaRegistro } = req.body;
     const newCategoria = await prisma.categoriaProducto.create({
         data: {
-            nombre,
-            fechaRegistro: fechaRegistro ? convertirFecha(fechaRegistro) : null,
+            nombre
         },
     });
     newCategoria.fechaRegistro = formatearFecha(newCategoria.fechaRegistro);
