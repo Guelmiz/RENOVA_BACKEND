@@ -127,7 +127,7 @@ export const getPedidoTicketPDF = async (req, res) => {
         doc.text(`Usuario: ${pedido.usuario.nombreUsuario}`);
         doc.text(`Email: ${pedido.usuario.email}`);
         
-        // Código de retiro
+      
         const ticketData = pedido.tickets[0];
         if(ticketData) {
             doc.moveDown();
