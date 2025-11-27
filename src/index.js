@@ -20,10 +20,20 @@ const app = express();
 const whitelist = ['process.env.FRONTEND_URL, http://localhost:3000'];
 
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://renova-frontend-a5su.vercel.app" 
-  ],
+  origin: (origin, callback) => {
+    const ACCEPTED_ORIGINS = [
+      "http://localhost:3000",
+      "https://renova-frontend-a5su.vercel.app" 
+    ];
+   if (!origin) return callback(null, true);
+    if (ACCEPTED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    if (origin.endsWith(".vercel.app")) {
+      return callback(null, true);
+    }
+    return callback(new Error('No permitido por CORS'));
+  },
   credentials: true
 }));
 
