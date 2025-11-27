@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
   "build": "npm install && npx prisma generate",
-   "start": "node index.js",
+   "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
